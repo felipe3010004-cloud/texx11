@@ -1,0 +1,6 @@
+{
+  "name": "Equipo Vida S.R.L. - Vitrina 3D & Asesora IA",
+  "description": "Plataforma oficial interactiva 3D de salud celular y nutrición bioactiva con catálogo tridimensional, combos exclusivos, asesoría inteligente con Gemini y compras directas en Bolivia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

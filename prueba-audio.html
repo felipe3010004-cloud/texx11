@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team Life - Prueba de audio</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f3f5f7;
+      color: #222;
+    }
+    main {
+      background: white;
+      padding: 24px;
+      border-radius: 14px;
+    }
+    textarea, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 16px;
+    }
+    textarea { min-height: 100px; }
+    button {
+      cursor: pointer;
+      border: 0;
+      border-radius: 8px;
+      background: #176b52;
+      color: white;
+    }
+    #respuesta {
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>TEAM LIFE</h1>
+  <h3>Asistente inteligente por voz</h3>
+
+  <textarea id="pregunta">Hola, ¿qué productos ofrece Team Life?</textarea>
+  <button id="consultar">Consultar y escuchar</button>
+  <button id="detener">Detener voz</button>
+
+  <p id="estado">Listo para probar.</p>
+  <h3>Respuesta de la IA</h3>
+  <p id="respuesta"></p>
+</main>
+
+<script>
+const pregunta = document.getElementById("pregunta");
+const respuesta = document.getElementById("respuesta");
+const estado = document.getElementById("estado");
+
+document.getElementById("consultar").onclick = async () => {
+  const texto = pregunta.value.trim();
+  if (!texto) {
+    estado.textContent = "Escribe una pregunta.";
+    return;
+  }
+
+  speechSynthesis.cancel();
+  estado.textContent = "Consultando a Gemini...";
+  respuesta.textContent = "";
+
+  try {
+    const res = await fetch("http://localhost:3000/api/ai/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: texto, history: [] })
+    });
+
+    const datos = await res.json();
+
+    if (!res.ok) {
+      throw new Error(datos.error || "Error del servidor: " + res.status);
+    }
+
+    const mensaje = datos.reply;
+    if (!mensaje) throw new Error("La IA no devolvió una respuesta.");
+
+    respuesta.textContent = mensaje;
+    const voz = new SpeechSynthesisUtterance(mensaje);
+    voz.lang = "es-ES";
+    voz.rate = 0.95;
+
+    voz.onstart = () => estado.textContent = "Reproduciendo respuesta...";
+    voz.onend = () => estado.textContent = "Prueba de audio terminada.";
+    voz.onerror = () => estado.textContent =
+      "No se pudo reproducir la voz. Comprueba el audio de Windows.";
+
+    speechSynthesis.speak(voz);
+  } catch (error) {
+    estado.textContent = "Error: " + error.message +
+      ". Verifica que el servidor esté activo y permita la conexión.";
+  }
+};
+
+document.getElementById("detener").onclick = () => {
+  speechSynthesis.cancel();
+  estado.textContent = "Voz detenida.";
+};
+</script>
+</body>
+</html>

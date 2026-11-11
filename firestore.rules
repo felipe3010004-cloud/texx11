@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'admin' ||
+        request.auth.token.email == 'admin@teamlife.com'
+      );
+    }
+
+    function isSeller() {
+      return isAuthenticated() && getUserData().role == 'vendedor';
+    }
+
+    // Configuración general del sistema (incluye QR estático y PagosYa)
+    match /configuracion/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Colección de comprobantes QR
+    match /comprobantes_qr/{comprobanteId} {
+      // Lectura: Administradores leen todo; Vendedores solo de sus pedidos asignados; Clientes solo los propios
+      allow read: if isAdmin() ||
+        (isSeller() && resource.data.vendedorId == request.auth.uid) ||
+        (isAuthenticated() && resource.data.clienteUid == request.auth.uid);
+
+      // Creación: Cualquier cliente o usuario autenticado puede subir un comprobante para su pedido,
+      // pero debe crearse obligatoriamente con estado 'PENDIENTE_VERIFICACION'.
+      // Ningún cliente puede crearlo directamente como 'VERIFICADO'.
+      allow create: if request.resource.data.estado == 'PENDIENTE_VERIFICACION' &&
+        request.resource.data.monto > 0 &&
+        request.resource.data.archivoUrl != null;
+
+      // Actualización: Solo administradores o el vendedor asignado pueden verificar o rechazar.
+      // Un cliente jamás puede cambiar el estado a 'VERIFICADO'.
+      allow update: if isAdmin() || (
+        isSeller() &&
+        resource.data.vendedorId == request.auth.uid &&
+        request.resource.data.estado in ['PENDIENTE_VERIFICACION', 'VERIFICADO', 'RECHAZADO']
+      );
+
+      // Eliminación: Solo administrador
+      allow delete: if isAdmin();
+    }
+
+    // Colección de pedidos
+    match /pedidos/{pedidoId} {
+      // Lectura: Admin, Vendedor asignado o cliente dueño
+      allow read: if true;
+
+      // Creación: Clientes pueden crear pedidos
+      allow create: if true;
+
+      // Actualización: Admin o vendedor asignado. Un cliente no puede auto-aprobarse el pago.
+      allow update: if isAdmin() || (
+        isSeller() && resource.data.vendedorId == request.auth.uid
+      ) || (
+        // Si el cliente adjunta o actualiza la referencia de su comprobante
+        request.resource.data.pagoQrEstatico.estado == 'PENDIENTE_VERIFICACION'
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // Colección de usuarios
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+    }
+
+    // Colección de auditoría
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Logs inmutables
+    }
+
+    // Colección de pagosya_checkouts
+    match /pagosya_checkouts/{checkoutId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Colecciones de productos, combos, contenido
+    match /productos/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /combos/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

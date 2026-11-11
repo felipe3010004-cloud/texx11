@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "comprobantes_qr": {
+      "title": "Comprobantes de Pago QR Estático",
+      "description": "Metadatos y referencias a los comprobantes de pago bancario estático (Banco Unión / Yasta) subidos por los clientes.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID único del comprobante" },
+        "pedidoId": { "type": "string", "description": "ID del pedido asociado en la colección pedidos" },
+        "codigoPedido": { "type": "string", "description": "Código legible del pedido (ej. #ORD-1234)" },
+        "clienteUid": { "type": "string", "description": "UID de Firebase Auth del cliente" },
+        "clienteNombre": { "type": "string", "description": "Nombre completo del cliente" },
+        "clienteCelular": { "type": "string", "description": "Teléfono celular del cliente" },
+        "vendedorId": { "type": "string", "description": "UID del distribuidor asignado al pedido" },
+        "vendedorNombre": { "type": "string", "description": "Nombre del distribuidor asignado" },
+        "monto": { "type": "number", "description": "Monto exacto a pagar en Bolivianos (Bs)" },
+        "nombreArchivoOriginal": { "type": "string", "description": "Nombre original del comprobante (ej. comprobante_banco_union.png)" },
+        "rutaStorage": { "type": "string", "description": "Ruta de almacenamiento en Firebase Storage" },
+        "archivoUrl": { "type": "string", "description": "URL de acceso/descarga del comprobante" },
+        "tipoArchivo": { "type": "string", "description": "MIME type (ej. image/jpeg, image/png, application/pdf)" },
+        "tamanoBytes": { "type": "number", "description": "Tamaño del archivo en bytes (límite 5MB)" },
+        "fechaEnvio": { "type": "string", "format": "date-time", "description": "Fecha y hora de envío del comprobante" },
+        "estado": {
+          "type": "string",
+          "enum": ["PENDIENTE", "PENDIENTE_VERIFICACION", "VERIFICADO", "RECHAZADO"],
+          "description": "Estado de verificación del pago"
+        },
+        "usuarioRevisionUid": { "type": "string", "description": "UID del admin o vendedor que revisó el comprobante" },
+        "usuarioRevisionNombre": { "type": "string", "description": "Nombre de quien revisó el comprobante" },
+        "usuarioRevisionRol": { "type": "string", "enum": ["admin", "vendedor"], "description": "Rol del revisor" },
+        "fechaRevision": { "type": "string", "format": "date-time", "description": "Fecha y hora de la revisión" },
+        "motivoRechazo": { "type": "string", "description": "Motivo obligatorio en caso de rechazo del pago" },
+        "reintentoNumero": { "type": "number", "description": "Número correlativo de envío del comprobante para el pedido" }
+      },
+      "required": ["id", "pedidoId", "monto", "archivoUrl", "estado", "fechaEnvio"]
+    },
+    "configuracion": {
+      "title": "Configuración del Sistema",
+      "description": "Ajustes globales de la tienda, pasarelas de pago y QR estático.",
+      "type": "object",
+      "properties": {
+        "qr_estatico": {
+          "type": "object",
+          "properties": {
+            "activo": { "type": "boolean", "description": "Habilita o deshabilita el método de pago por QR estático en checkout" },
+            "imagenQrUrl": { "type": "string", "description": "URL pública o Storage del QR bancario oficial" },
+            "banco": { "type": "string", "description": "Nombre de la entidad bancaria (ej. Banco Unión S.A.)" },
+            "titular": { "type": "string", "description": "Nombre del titular de la cuenta" },
+            "numeroCuenta": { "type": "string", "description": "Número de cuenta bancaria" },
+            "tipoCuenta": { "type": "string", "description": "Caja de ahorro / Cuenta corriente" },
+            "vencimiento": { "type": "string", "description": "Fecha de vencimiento del QR si aplica" },
+            "instrucciones": { "type": "string", "description": "Instrucciones de pago para el cliente" }
+          }
+        }
+      }
+    },
+    "pedidos": {
+      "title": "Pedidos",
+      "description": "Registro de compras y pedidos de clientes de TEAM LIFE.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clienteNombre": { "type": "string" },
+        "clienteCelular": { "type": "string" },
+        "clienteUid": { "type": "string" },
+        "departamento": { "type": "string" },
+        "total": { "type": "number" },
+        "estado": { "type": "string", "enum": ["pendiente", "confirmado", "rechazado", "cancelado"] },
+        "metodoPago": { "type": "string", "enum": ["pagosya", "qr_estatico", "efectivo"] },
+        "vendedorId": { "type": "string" },
+        "vendedorNombre": { "type": "string" },
+        "pagoQrEstatico": {
+          "type": "object",
+          "properties": {
+            "estado": { "type": "string", "enum": ["PENDIENTE", "PENDIENTE_VERIFICACION", "VERIFICADO", "RECHAZADO"] },
+            "ultimoComprobanteId": { "type": "string" },
+            "ultimoComprobanteUrl": { "type": "string" },
+            "motivoRechazo": { "type": "string" },
+            "fechaRevision": { "type": "string" },
+            "revisadoPor": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
